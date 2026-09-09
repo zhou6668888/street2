@@ -1,0 +1,1955 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>路边摊经营</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{overflow:hidden;background:#2a2a2a;font-family:'Microsoft YaHei','PingFang SC',sans-serif;user-select:none}
+canvas{display:block}
+#ui{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+#status{position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:12px;background:rgba(0,0,0,0.55);padding:8px 18px;border-radius:20px;color:#fff;font-size:14px;pointer-events:auto;z-index:10}
+.stat{display:flex;align-items:center;gap:4px;white-space:nowrap}
+.stat-icon{font-size:16px}
+#buttons{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:10px;pointer-events:auto;z-index:10}
+.btn{padding:10px 22px;border:none;border-radius:12px;font-size:15px;font-weight:bold;cursor:pointer;transition:all .2s;color:#fff;text-shadow:1px 1px 2px rgba(0,0,0,0.3)}
+.btn:hover{transform:scale(1.05);filter:brightness(1.1)}
+.btn:active{transform:scale(0.95)}
+.btn-upgrade{background:linear-gradient(135deg,#f093fb,#f5576c)}
+.btn-business{background:linear-gradient(135deg,#4facfe,#00f2fe)}
+.btn-rest{background:linear-gradient(135deg,#43e97b,#38f9d7)}
+.btn-home{background:linear-gradient(135deg,#fa709a,#fee140)}
+.btn-action{background:linear-gradient(135deg,#a18cd1,#fbc2eb)}
+.btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;filter:none}
+#event-popup{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);background:rgba(20,20,40,0.92);border:3px solid #f5c542;border-radius:20px;padding:30px;text-align:center;color:#fff;pointer-events:auto;z-index:100;min-width:320px;transition:transform .3s ease}
+#event-popup.show{transform:translate(-50%,-50%) scale(1)}
+#event-popup h3{font-size:20px;margin-bottom:10px;color:#f5c542}
+#event-popup p{font-size:15px;margin-bottom:18px;line-height:1.5}
+#event-btns{display:flex;gap:10px;justify-content:center}
+#day-summary{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);background:rgba(20,20,40,0.92);border:3px solid #4facfe;border-radius:20px;padding:30px;text-align:center;color:#fff;pointer-events:auto;z-index:100;min-width:300px;transition:transform .3s ease}
+#day-summary.show{transform:translate(-50%,-50%) scale(1)}
+#day-summary h3{font-size:20px;margin-bottom:12px;color:#4facfe}
+#day-summary p{font-size:15px;margin-bottom:8px;line-height:1.6}
+#loading-screen{position:absolute;top:0;left:0;width:100%;height:100%;background:#f5ebe0;z-index:200;display:flex;align-items:center;justify-content:center;flex-direction:column;transition:opacity .5s}
+#loading-screen.hide{opacity:0;pointer-events:none}
+#loading-text{color:#8B6914;font-size:18px;margin-top:20px;font-weight:bold}
+#gameover-screen{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:200;display:none;align-items:center;justify-content:center;flex-direction:column;color:#fff}
+#gameover-screen h2{font-size:36px;margin-bottom:10px;color:#f5576c}
+#gameover-screen p{font-size:18px;margin-bottom:20px}
+#tip{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.7);font-size:12px;pointer-events:none;z-index:10}
+#challenge-bar{position:absolute;top:52px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.5);padding:5px 16px;border-radius:12px;color:#ffd700;font-size:13px;pointer-events:none;z-index:10;display:none;white-space:nowrap}
+#combo-display{position:absolute;top:85px;right:20px;color:#ff6b6b;font-size:22px;font-weight:bold;pointer-events:none;z-index:10;display:none;text-shadow:2px 2px 4px rgba(0,0,0,0.5)}
+#skill-panel{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);background:rgba(15,15,35,0.95);border:3px solid #a18cd1;border-radius:20px;padding:25px;color:#fff;pointer-events:auto;z-index:100;width:420px;max-height:80vh;overflow-y:auto;transition:transform .3s ease}
+#skill-panel.show{transform:translate(-50%,-50%) scale(1)}
+#skill-panel h3{text-align:center;font-size:18px;margin-bottom:15px;color:#a18cd1}
+.skill-row{display:flex;align-items:center;justify-content:space-between;padding:10px;margin:6px 0;background:rgba(255,255,255,0.06);border-radius:10px;transition:background .2s}
+.skill-row:hover{background:rgba(255,255,255,0.12)}
+.skill-info{flex:1}
+.skill-name{font-size:14px;font-weight:bold;color:#f0e6ff}
+.skill-desc{font-size:11px;color:#aaa;margin-top:2px}
+.skill-lvl{font-size:11px;color:#4facfe;margin-top:2px}
+.skill-btn{padding:6px 14px;border:none;border-radius:8px;font-size:12px;font-weight:bold;cursor:pointer;color:#fff;background:linear-gradient(135deg,#a18cd1,#fbc2eb);transition:all .2s}
+.skill-btn:hover{filter:brightness(1.15)}
+.skill-btn:disabled{opacity:0.4;cursor:not-allowed}
+.btn-skill{background:linear-gradient(135deg,#a18cd1,#fbc2eb)}
+#quality-popup{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);font-size:28px;font-weight:bold;pointer-events:none;z-index:50;opacity:0;transition:all .4s;text-shadow:2px 2px 6px rgba(0,0,0,0.5)}
+#audio-toggle{position:absolute;top:10px;right:10px;width:40px;height:40px;border-radius:50%;border:2px solid rgba(255,255,255,0.3);background:rgba(0,0,0,0.5);color:#fff;font-size:18px;cursor:pointer;pointer-events:auto;z-index:20;display:flex;align-items:center;justify-content:center;transition:all .2s}
+#audio-toggle:hover{background:rgba(0,0,0,0.7);border-color:rgba(255,255,255,0.5)}
+#audio-toggle.muted{opacity:0.5}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="ui">
+  <div id="status" style="display:none">
+    <div class="stat"><span class="stat-icon">📅</span>第<span id="s-day">1</span>天</div>
+    <div class="stat"><span class="stat-icon">💰</span><span id="s-money">0</span>元</div>
+    <div class="stat"><span class="stat-icon">🏪</span><span id="s-level">纸箱地摊</span></div>
+    <div class="stat"><span class="stat-icon">📦</span>库存<span id="s-inv">500</span>份</div>
+  </div>
+  <button id="audio-toggle" onclick="toggleAudio()" title="音效开关">🔊</button>
+  <div id="buttons" style="display:none">
+    <button class="btn btn-upgrade" id="btn-upgrade" onclick="sfxClick();doUpgrade()">升级 (0元)</button>
+    <button class="btn btn-skill" id="btn-skill" onclick="sfxClick();toggleSkillPanel()">技能</button>
+    <button class="btn btn-business" id="btn-business" onclick="sfxClick();startBusiness()">营业</button>
+    <button class="btn btn-rest" id="btn-rest" onclick="sfxClick();startRest()">休息</button>
+    <button class="btn btn-home" id="btn-home" onclick="sfxClick();goHome()" style="display:none">回家</button>
+  </div>
+  <div id="challenge-bar"></div>
+  <div id="combo-display"></div>
+  <div id="quality-popup"></div>
+  <div id="skill-panel">
+    <h3>🌟 技能树</h3>
+    <div id="skill-list"></div>
+    <button class="btn btn-action" onclick="sfxClick();toggleSkillPanel()" style="margin-top:12px;width:100%">关闭</button>
+  </div>
+  <div id="tip" style="display:none">点击地面移动 | WASD/方向键移动</div>
+  <div id="event-popup">
+    <h3 id="ev-title"></h3>
+    <p id="ev-desc"></p>
+    <div id="event-btns"></div>
+  </div>
+  <div id="day-summary">
+    <h3>📊 今日结算</h3>
+    <p id="sum-text"></p>
+    <button class="btn btn-action" onclick="sfxClick();closeSummary()" style="margin-top:10px">继续</button>
+  </div>
+  <div id="loading-screen">
+    <canvas id="load-canvas" width="400" height="300"></canvas>
+    <div id="loading-text">加载中...</div>
+  </div>
+  <div id="gameover-screen">
+    <h2>游戏结束</h2>
+    <p id="go-text"></p>
+    <button class="btn btn-action" onclick="sfxClick();location.reload()">重新开始</button>
+  </div>
+</div>
+
+<script>
+// ==================== CONSTANTS ====================
+const LEVEL_NAMES = ['纸箱地摊','小推车','固定摊位','品牌连锁','上市集团'];
+const LEVEL_COSTS = [0, 100, 300, 800, 2000];
+const LEVEL_BONUS = [0, 2, 5, 10, 20];
+const PRICE = 8;
+const DAY_DURATION = 120; // seconds per business day
+const BUSINESS_START = 8; // game hour
+const BUSINESS_END = 20;
+const MAP_W = 3200;
+const GROUND_RATIO = 0.68;
+const EVENTS = [
+  {id:'chengguan',title:'🚨 城管来了！',desc:'城管巡逻发现了你的摊位！',options:[
+    {text:'跑路（损失一半库存）',result:'run'},
+    {text:'塞钱（花20元）',result:'bribe'}
+  ]},
+  {id:'wanghong',title:'📱 网红探店！',desc:'一位网红来你的摊位直播，今天收入翻倍！',options:[
+    {text:'太棒了！',result:'accept'}
+  ]},
+  {id:'rain',title:'🌧️ 下雨了！',desc:'突然下起了雨，顾客少了很多...',options:[
+    {text:'撑伞继续',result:'accept'}
+  ]},
+  {id:'foodfest',title:'🎉 美食节！',desc:'附近正在举办美食节，人流量大增！',options:[
+    {text:'太好了！',result:'accept'}
+  ]},
+  {id:'cheap_ingredients',title:'🥬 食材促销！',desc:'有供应商在清仓大甩卖，要进货吗？',options:[
+    {text:'买50份（30元）',result:'buy50'},
+    {text:'不买',result:'skip'}
+  ]},
+  {id:'rival',title:'😤 竞争对手！',desc:'旁边来了个新摊位抢生意！',options:[
+    {text:'降价竞争（花15元）',result:'compete'},
+    {text:'送他煎饼交朋友',result:'befriend'}
+  ]},
+  {id:'redenvelope',title:'🧧 幸运红包！',desc:'路边捡到一个红包！',options:[
+    {text:'打开看看',result:'open'}
+  ]},
+  {id:'inspection',title:'📋 卫生检查！',desc:'食品安全检查员来了！',options:[
+    {text:'配合检查（花10元）',result:'pass'},
+    {text:'偷偷溜走（损失5份库存）',result:'flee'}
+  ]}
+];
+
+const SKILLS = [
+  {id:'speed1',name:'手速提升 I',desc:'烹饪条速度降低20%',cost:50,maxLv:1,requires:null},
+  {id:'speed2',name:'手速提升 II',desc:'烹饪条速度再降20%',cost:150,maxLv:1,requires:'speed1'},
+  {id:'price1',name:'涨价策略 I',desc:'每份煎饼+2元',cost:80,maxLv:1,requires:null},
+  {id:'price2',name:'涨价策略 II',desc:'每份煎饼再+3元',cost:200,maxLv:1,requires:'price1'},
+  {id:'combo1',name:'连击大师 I',desc:'连击奖励额外+25%',cost:100,maxLv:1,requires:null},
+  {id:'combo2',name:'连击大师 II',desc:'连击奖励额外+25%',cost:250,maxLv:1,requires:'combo1'},
+  {id:'luck',name:'幸运星',desc:'随机事件触发率提升到45%',cost:120,maxLv:1,requires:null},
+  {id:'stock',name:'保鲜技术',desc:'每日库存损耗-1（最少0）',cost:80,maxLv:3,requires:null},
+  {id:'charm',name:'个人魅力',desc:'顾客到达速度+15%',cost:100,maxLv:2,requires:null},
+  {id:'explore',name:'探索直觉',desc:'休息时移动速度+30%',cost:60,maxLv:2,requires:null}
+];
+
+const CHALLENGES = [
+  {desc:'卖出{n}份煎饼',type:'sales',gen:()=>({n:8+Math.floor(Math.random()*12)}),reward:n=>n*5},
+  {desc:'赚取{n}元',type:'income',gen:()=>({n:50+Math.floor(Math.random()*100)}),reward:n=>Math.floor(n*0.4)},
+  {desc:'达成{n}连击',type:'combo',gen:()=>({n:3+Math.floor(Math.random()*4)}),reward:n=>n*15},
+  {desc:'获得{n}次完美烹饪',type:'perfects',gen:()=>({n:3+Math.floor(Math.random()*5)}),reward:n=>n*10},
+  {desc:'库存不低于{n}份完成营业',type:'invAbove',gen:()=>({n:450+Math.floor(Math.random()*40)}),reward:()=>40},
+];
+
+// ==================== GAME STATE ====================
+let G = {
+  day: 1, money: 0, level: 0, inv: 500,
+  mode: 'loading', // loading, explore, business, rest, summary, gameover
+  timeOfDay: BUSINESS_START, // 0-24
+  player: {x: 600, y: 0, targetX: 600, state: 'idle', animT: 0, walkFrame: 0, dir: 1, hasCrown: false, crownT: 0},
+  stallX: 600,
+  homeX: 200,
+  camera: {x: 0},
+  npcs: [],
+  otherStalls: [],
+  customers: [],
+  particles: [],
+  rainDrops: [],
+  salesToday: 0,
+  incomeToday: 0,
+  lastSaleIncome: 0,
+  eventMod: 1,
+  eventActive: null,
+  eventPending: false,
+  businessTimer: 0,
+  customerTimer: 0,
+  dayEnded: false,
+  keys: {},
+  W: 0, H: 0, groundY: 0,
+  loadingPhase: 0,
+  loadingT: 0,
+  stickX: -50,
+  // Cooking mini-game
+  cooking: {active:false, pos:0, dir:1, speed:2.5, clicked:false},
+  // Combo system
+  combo: 0,
+  maxCombo: 0,
+  perfectsToday: 0,
+  // Daily challenge
+  challenge: null,
+  challengeProgress: 0,
+  // Skills
+  skillLevels: {},
+  // Price bonus from skills
+  priceBonus: 0,
+  // Quality popup
+  qualityText: '',
+  qualityTimer: 0,
+  qualityColor: '#fff',
+  lastQuality: 1,
+};
+
+// ==================== AUDIO ENGINE ====================
+let audioCtx = null;
+let audioMuted = false;
+let bgmPlaying = false;
+let bgmNodes = [];
+let masterGain = null;
+
+function initAudio() {
+  if (audioCtx) return;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.3;
+    masterGain.connect(audioCtx.destination);
+  } catch(e) { console.log('Audio not available'); }
+}
+
+function toggleAudio() {
+  audioMuted = !audioMuted;
+  const btn = document.getElementById('audio-toggle');
+  btn.innerText = audioMuted ? '🔇' : '🔊';
+  btn.classList.toggle('muted', audioMuted);
+  if (masterGain) {
+    masterGain.gain.value = audioMuted ? 0 : 0.3;
+  }
+  if (!audioMuted && !bgmPlaying && G.mode !== 'loading') {
+    startBGM();
+  }
+  if (audioMuted) {
+    stopBGM();
+  }
+}
+
+// Play a simple tone
+function playTone(freq, duration, type, volume, delay) {
+  if (!audioCtx || audioMuted) return;
+  type = type || 'sine';
+  volume = volume || 0.3;
+  delay = delay || 0;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.value = 0;
+  gain.gain.linearRampToValueAtTime(volume, audioCtx.currentTime + delay + 0.01);
+  gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + delay + duration);
+  osc.connect(gain);
+  gain.connect(masterGain);
+  osc.start(audioCtx.currentTime + delay);
+  osc.stop(audioCtx.currentTime + delay + duration + 0.1);
+}
+
+// Play a chord
+function playChord(freqs, duration, type, volume, delay) {
+  freqs.forEach(f => playTone(f, duration, type, volume / freqs.length, delay));
+}
+
+// Sound effects
+function sfxClick() {
+  playTone(800, 0.08, 'square', 0.15);
+}
+
+function sfxSell() {
+  playTone(1200, 0.06, 'sine', 0.2);
+  playTone(1600, 0.06, 'sine', 0.15, 0.05);
+}
+
+function sfxCookPerfect() {
+  playTone(523, 0.1, 'sine', 0.25);
+  playTone(659, 0.1, 'sine', 0.2, 0.08);
+  playTone(784, 0.15, 'sine', 0.25, 0.16);
+}
+
+function sfxCookGood() {
+  playTone(440, 0.1, 'sine', 0.2);
+  playTone(554, 0.12, 'sine', 0.18, 0.08);
+}
+
+function sfxCookOk() {
+  playTone(330, 0.15, 'triangle', 0.15);
+}
+
+function sfxCookBad() {
+  playTone(200, 0.2, 'sawtooth', 0.12);
+  playTone(150, 0.25, 'sawtooth', 0.1, 0.1);
+}
+
+function sfxCombo() {
+  playTone(880, 0.08, 'sine', 0.2);
+  playTone(1100, 0.08, 'sine', 0.18, 0.06);
+  playTone(1320, 0.1, 'sine', 0.2, 0.12);
+}
+
+function sfxUpgrade() {
+  // Triumphant fanfare
+  playTone(523, 0.15, 'sine', 0.3);
+  playTone(659, 0.15, 'sine', 0.25, 0.12);
+  playTone(784, 0.15, 'sine', 0.3, 0.24);
+  playChord([523, 659, 784, 1047], 0.4, 'sine', 0.2, 0.36);
+}
+
+function sfxEvent() {
+  // Alert/notification sound
+  playTone(880, 0.1, 'square', 0.15);
+  playTone(1100, 0.1, 'square', 0.12, 0.1);
+  playTone(880, 0.1, 'square', 0.15, 0.2);
+}
+
+function sfxEventGood() {
+  playTone(660, 0.1, 'sine', 0.2);
+  playTone(880, 0.12, 'sine', 0.2, 0.08);
+  playTone(1100, 0.15, 'sine', 0.22, 0.16);
+}
+
+function sfxEventBad() {
+  playTone(300, 0.15, 'sawtooth', 0.12);
+  playTone(250, 0.2, 'sawtooth', 0.1, 0.12);
+}
+
+function sfxDayEnd() {
+  playTone(440, 0.12, 'sine', 0.18);
+  playTone(550, 0.12, 'sine', 0.15, 0.1);
+  playTone(660, 0.15, 'sine', 0.18, 0.2);
+}
+
+function sfxGameOver() {
+  playTone(440, 0.3, 'sine', 0.2);
+  playTone(370, 0.3, 'sine', 0.18, 0.25);
+  playTone(330, 0.3, 'sine', 0.15, 0.5);
+  playTone(262, 0.5, 'sine', 0.2, 0.75);
+}
+
+function sfxSkillBuy() {
+  playTone(600, 0.08, 'sine', 0.2);
+  playTone(800, 0.08, 'sine', 0.18, 0.06);
+  playTone(1000, 0.1, 'sine', 0.2, 0.12);
+}
+
+function sfxWalk() {
+  playTone(100 + Math.random() * 50, 0.05, 'triangle', 0.05);
+}
+
+function sfxChallengeComplete() {
+  playTone(784, 0.1, 'sine', 0.25);
+  playTone(988, 0.1, 'sine', 0.22, 0.08);
+  playTone(1175, 0.15, 'sine', 0.25, 0.16);
+  playChord([784, 988, 1175], 0.3, 'sine', 0.15, 0.24);
+}
+
+// Background music - simple cheerful loop
+function startBGM() {
+  if (!audioCtx || bgmPlaying || audioMuted) return;
+  bgmPlaying = true;
+  
+  // Simple melody pattern (C major scale based, cheerful)
+  const melody = [
+    523, 587, 659, 784, 659, 587, 523, 0,
+    440, 494, 523, 587, 523, 494, 440, 0,
+    392, 440, 494, 523, 587, 659, 784, 0,
+    659, 587, 523, 494, 440, 392, 349, 0
+  ];
+  const bass = [
+    262, 262, 262, 262, 330, 330, 330, 330,
+    220, 220, 220, 220, 262, 262, 262, 262,
+    196, 196, 196, 196, 220, 220, 220, 220,
+    262, 262, 262, 262, 220, 220, 196, 196
+  ];
+  
+  const noteLen = 0.25;
+  const loopLen = melody.length * noteLen;
+  
+  function playLoop(startTime) {
+    if (!bgmPlaying || audioMuted) return;
+    
+    for (let i = 0; i < melody.length; i++) {
+      const t = startTime + i * noteLen;
+      if (melody[i] > 0) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = melody[i];
+        gain.gain.value = 0;
+        gain.gain.linearRampToValueAtTime(0.08, t + 0.02);
+        gain.gain.linearRampToValueAtTime(0, t + noteLen * 0.9);
+        osc.connect(gain);
+        gain.connect(masterGain);
+        osc.start(t);
+        osc.stop(t + noteLen);
+        bgmNodes.push(osc);
+      }
+      if (bass[i] > 0) {
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.type = 'triangle';
+        osc2.frequency.value = bass[i];
+        gain2.gain.value = 0;
+        gain2.gain.linearRampToValueAtTime(0.05, t + 0.02);
+        gain2.gain.linearRampToValueAtTime(0, t + noteLen * 0.9);
+        osc2.connect(gain2);
+        gain2.connect(masterGain);
+        osc2.start(t);
+        osc2.stop(t + noteLen);
+        bgmNodes.push(osc2);
+      }
+    }
+    
+    // Schedule next loop
+    setTimeout(() => playLoop(startTime + loopLen), (loopLen - 1) * 1000);
+  }
+  
+  playLoop(audioCtx.currentTime + 0.1);
+}
+
+function stopBGM() {
+  bgmPlaying = false;
+  bgmNodes.forEach(n => { try { n.stop(); } catch(e) {} });
+  bgmNodes = [];
+}
+
+// ==================== CANVAS SETUP ====================
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const loadCanvas = document.getElementById('load-canvas');
+const loadCtx = loadCanvas.getContext('2d');
+
+function resize() {
+  G.W = canvas.width = window.innerWidth;
+  G.H = canvas.height = window.innerHeight;
+  G.groundY = Math.floor(G.H * GROUND_RATIO);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ==================== INPUT ====================
+window.addEventListener('keydown', e => { G.keys[e.key] = true; G.keys[e.code] = true; });
+window.addEventListener('keyup', e => { G.keys[e.key] = false; G.keys[e.code] = false; });
+canvas.addEventListener('click', e => {
+  if (G.cooking.active && !G.cooking.clicked) {
+    G.cooking.clicked = true;
+    sfxClick();
+    return;
+  }
+  if (G.mode === 'explore' || G.mode === 'rest') {
+    G.player.targetX = e.clientX + G.camera.x;
+  }
+});
+
+// ==================== WORLD GENERATION ====================
+function initWorld() {
+  G.npcs = [];
+  for (let i = 0; i < 12; i++) {
+    G.npcs.push({
+      x: 100 + Math.random() * (MAP_W - 200),
+      baseY: 0,
+      dir: Math.random() > 0.5 ? 1 : -1,
+      speed: 15 + Math.random() * 25,
+      color: ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c'][Math.floor(Math.random()*6)],
+      walkFrame: Math.random() * Math.PI * 2,
+      size: 0.8 + Math.random() * 0.4
+    });
+  }
+  G.otherStalls = [
+    {x: 900, type: '水果摊', color: '#e74c3c'},
+    {x: 1400, type: '烧烤摊', color: '#e67e22'},
+    {x: 2000, type: '奶茶店', color: '#3498db'},
+    {x: 2600, type: '炒粉摊', color: '#f39c12'},
+  ];
+}
+
+// ==================== DRAWING HELPERS ====================
+function wobble(v, amt) { return v + (Math.random() - 0.5) * amt; }
+
+function drawWobblyLine(c, x1, y1, x2, y2, w) {
+  w = w || 1.2;
+  c.beginPath();
+  c.moveTo(wobble(x1,w), wobble(y1,w));
+  const mx = (x1+x2)/2 + (Math.random()-0.5)*w*2;
+  const my = (y1+y2)/2 + (Math.random()-0.5)*w*2;
+  c.quadraticCurveTo(mx, my, wobble(x2,w), wobble(y2,w));
+  c.stroke();
+}
+
+function drawWobblyCircle(c, x, y, r, w) {
+  w = w || 1;
+  c.beginPath();
+  for (let i = 0; i <= 32; i++) {
+    const a = (i/32) * Math.PI * 2;
+    const rr = r + (Math.random()-0.5) * w * 2;
+    const px = x + Math.cos(a) * rr;
+    const py = y + Math.sin(a) * rr;
+    if (i === 0) c.moveTo(px, py);
+    else c.lineTo(px, py);
+  }
+  c.closePath();
+}
+
+function drawStickFigure(c, x, y, opts) {
+  opts = opts || {};
+  const s = opts.scale || 1;
+  const col = opts.color || '#4a90d9';
+  const state = opts.state || 'idle';
+  const frame = opts.walkFrame || 0;
+  const dir = opts.dir || 1;
+  const headR = 10 * s;
+  const bodyLen = 22 * s;
+  const legLen = 18 * s;
+  const armLen = 16 * s;
+  c.strokeStyle = col;
+  c.fillStyle = col;
+  c.lineWidth = Math.max(2, 2.5 * s);
+  c.lineCap = 'round';
+
+  let headY = y - bodyLen - headR;
+  let bodyTop = y - bodyLen;
+  let bodyBot = y;
+  let tilt = 0;
+
+  if (state === 'sad') {
+    headY += 6 * s;
+    tilt = 0.15;
+  }
+  if (state === 'jump') {
+    headY -= 8 * s;
+    bodyTop -= 8 * s;
+    bodyBot -= 8 * s;
+  }
+  if (state === 'lie') {
+    // horizontal
+    c.save();
+    c.translate(x, y);
+    c.rotate(dir * Math.PI / 2);
+    // head
+    drawWobblyCircle(c, 0, -bodyLen - headR, headR, 0.8);
+    c.fill(); c.stroke();
+    // body
+    drawWobblyLine(c, 0, -bodyLen, 0, 0, 0.8);
+    // arms
+    drawWobblyLine(c, 0, -bodyLen + 5*s, -armLen*0.7, -bodyLen + 10*s, 0.8);
+    drawWobblyLine(c, 0, -bodyLen + 5*s, armLen*0.7, -bodyLen + 10*s, 0.8);
+    // legs
+    drawWobblyLine(c, 0, 0, -legLen*0.5, legLen*0.5, 0.8);
+    drawWobblyLine(c, 0, 0, legLen*0.5, legLen*0.5, 0.8);
+    // X eyes
+    c.lineWidth = Math.max(1.5, 1.5 * s);
+    drawWobblyLine(c, -3*s, -bodyLen-headR-2*s, 3*s, -bodyLen-headR+2*s, 0.3);
+    drawWobblyLine(c, 3*s, -bodyLen-headR-2*s, -3*s, -bodyLen-headR+2*s, 0.3);
+    c.restore();
+    return;
+  }
+
+  // Apply tilt
+  c.save();
+  c.translate(x, 0);
+  c.rotate(tilt * dir);
+
+  // Head
+  drawWobblyCircle(c, 0, headY, headR, 0.8);
+  if (opts.fill !== false) c.fill();
+  c.stroke();
+
+  // Eyes
+  c.fillStyle = '#fff';
+  const eyeY = headY - 1*s;
+  c.beginPath(); c.arc(-3*s*dir, eyeY, 2.2*s, 0, Math.PI*2); c.fill();
+  c.beginPath(); c.arc(3*s*dir, eyeY, 2.2*s, 0, Math.PI*2); c.fill();
+  c.fillStyle = '#333';
+  c.beginPath(); c.arc(-3*s*dir + dir*0.5*s, eyeY, 1.1*s, 0, Math.PI*2); c.fill();
+  c.beginPath(); c.arc(3*s*dir + dir*0.5*s, eyeY, 1.1*s, 0, Math.PI*2); c.fill();
+
+  // Mouth
+  c.strokeStyle = '#333';
+  c.lineWidth = Math.max(1, 1.2 * s);
+  if (state === 'happy' || state === 'jump') {
+    c.beginPath();
+    c.arc(0, headY + 3*s, 3*s, 0.1, Math.PI - 0.1);
+    c.stroke();
+  } else if (state === 'sad') {
+    c.beginPath();
+    c.arc(0, headY + 6*s, 3*s, Math.PI + 0.1, -0.1);
+    c.stroke();
+  } else {
+    drawWobblyLine(c, -2*s, headY + 4*s, 2*s, headY + 4*s, 0.3);
+  }
+
+  c.strokeStyle = col;
+  c.lineWidth = Math.max(2, 2.5 * s);
+
+  // Body
+  drawWobblyLine(c, 0, bodyTop, 0, bodyBot, 0.8);
+
+  // Arms
+  const armSwing = Math.sin(frame) * 12 * s;
+  if (state === 'jump') {
+    drawWobblyLine(c, 0, bodyTop + 5*s, -armLen, bodyTop - 8*s, 0.8);
+    drawWobblyLine(c, 0, bodyTop + 5*s, armLen, bodyTop - 8*s, 0.8);
+  } else if (state === 'work') {
+    drawWobblyLine(c, 0, bodyTop + 5*s, dir * armLen * 0.8, bodyTop + 2*s, 0.8);
+    drawWobblyLine(c, 0, bodyTop + 5*s, -dir * armLen * 0.3, bodyTop + 12*s, 0.8);
+  } else {
+    drawWobblyLine(c, 0, bodyTop + 5*s, -armLen*0.6 + armSwing*0.3, bodyTop + armLen*0.8, 0.8);
+    drawWobblyLine(c, 0, bodyTop + 5*s, armLen*0.6 - armSwing*0.3, bodyTop + armLen*0.8, 0.8);
+  }
+
+  // Legs
+  const legSwing = Math.sin(frame) * 10 * s;
+  if (state === 'jump') {
+    drawWobblyLine(c, 0, bodyBot, -legLen*0.5, bodyBot + legLen*0.3, 0.8);
+    drawWobblyLine(c, 0, bodyBot, legLen*0.5, bodyBot + legLen*0.3, 0.8);
+  } else {
+    drawWobblyLine(c, 0, bodyBot, -legLen*0.5 + legSwing, bodyBot + legLen, 0.8);
+    drawWobblyLine(c, 0, bodyBot, legLen*0.5 - legSwing, bodyBot + legLen, 0.8);
+  }
+
+  // Crown
+  if (opts.crown) {
+    const crY = headY - headR - 2*s;
+    c.fillStyle = '#f5c542';
+    c.strokeStyle = '#d4a017';
+    c.lineWidth = Math.max(1.5, 1.5*s);
+    c.beginPath();
+    c.moveTo(-7*s, crY);
+    c.lineTo(-8*s, crY - 8*s);
+    c.lineTo(-3*s, crY - 4*s);
+    c.lineTo(0, crY - 10*s);
+    c.lineTo(3*s, crY - 4*s);
+    c.lineTo(8*s, crY - 8*s);
+    c.lineTo(7*s, crY);
+    c.closePath();
+    c.fill(); c.stroke();
+  }
+
+  c.restore();
+}
+
+// ==================== SKY & ENVIRONMENT ====================
+function getTimeNorm() {
+  return G.timeOfDay / 24;
+}
+
+function drawSky(c, w, h, groundY) {
+  const t = G.timeOfDay;
+  let topCol, botCol;
+  if (t >= 6 && t < 10) { // morning
+    const f = (t - 6) / 4;
+    topCol = lerpColor('#1a1a3e', '#87CEEB', f);
+    botCol = lerpColor('#2d2d5e', '#f5ebe0', f);
+  } else if (t >= 10 && t < 16) { // day
+    topCol = '#87CEEB';
+    botCol = '#f5ebe0';
+  } else if (t >= 16 && t < 20) { // evening
+    const f = (t - 16) / 4;
+    topCol = lerpColor('#87CEEB', '#ff7b54', f);
+    botCol = lerpColor('#f5ebe0', '#ffb347', f);
+  } else if (t >= 20 && t < 22) { // dusk
+    const f = (t - 20) / 2;
+    topCol = lerpColor('#ff7b54', '#1a1a3e', f);
+    botCol = lerpColor('#ffb347', '#2d2d5e', f);
+  } else { // night
+    topCol = '#1a1a3e';
+    botCol = '#2d2d5e';
+  }
+  const grad = c.createLinearGradient(0, 0, 0, groundY);
+  grad.addColorStop(0, topCol);
+  grad.addColorStop(1, botCol);
+  c.fillStyle = grad;
+  c.fillRect(0, 0, w, groundY);
+
+  // Stars at night
+  if (t >= 20 || t < 6) {
+    c.fillStyle = 'rgba(255,255,255,0.7)';
+    const seed = G.day * 137;
+    for (let i = 0; i < 40; i++) {
+      const sx = ((seed + i * 997) % w);
+      const sy = ((seed + i * 571) % (groundY * 0.7));
+      const sr = 1 + (i % 3) * 0.5;
+      const twinkle = Math.sin(Date.now() * 0.003 + i) * 0.3 + 0.7;
+      c.globalAlpha = twinkle;
+      c.beginPath(); c.arc(sx, sy, sr, 0, Math.PI * 2); c.fill();
+    }
+    c.globalAlpha = 1;
+  }
+
+  // Sun
+  if (t >= 6 && t < 20) {
+    const sunF = (t - 6) / 14;
+    const sunX = w * 0.1 + w * 0.8 * sunF;
+    const sunY = groundY * 0.15 + Math.sin(sunF * Math.PI) * (-groundY * 0.25);
+    const sunR = 25;
+    c.fillStyle = '#FFD700';
+    c.beginPath(); c.arc(sunX, sunY, sunR, 0, Math.PI * 2); c.fill();
+    // rays
+    c.strokeStyle = '#FFD700';
+    c.lineWidth = 2;
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2 + Date.now() * 0.001;
+      c.beginPath();
+      c.moveTo(sunX + Math.cos(a) * (sunR + 4), sunY + Math.sin(a) * (sunR + 4));
+      c.lineTo(sunX + Math.cos(a) * (sunR + 12), sunY + Math.sin(a) * (sunR + 12));
+      c.stroke();
+    }
+  }
+
+  // Moon
+  if (t >= 20 || t < 6) {
+    const moonF = t >= 20 ? (t - 20) / 10 : (t + 4) / 10;
+    const moonX = w * 0.15 + w * 0.7 * moonF;
+    const moonY = groundY * 0.2 - Math.sin(moonF * Math.PI) * groundY * 0.15;
+    c.fillStyle = '#f0e68c';
+    c.beginPath(); c.arc(moonX, moonY, 18, 0, Math.PI * 2); c.fill();
+    c.fillStyle = getTimeNorm() > 0.8 ? '#1a1a3e' : '#2d2d5e';
+    c.beginPath(); c.arc(moonX + 6, moonY - 3, 15, 0, Math.PI * 2); c.fill();
+  }
+}
+
+function lerpColor(a, b, t) {
+  const ah = parseInt(a.slice(1), 16);
+  const bh = parseInt(b.slice(1), 16);
+  const ar = (ah >> 16) & 0xff, ag = (ah >> 8) & 0xff, ab = ah & 0xff;
+  const br = (bh >> 16) & 0xff, bg = (bh >> 8) & 0xff, bb = bh & 0xff;
+  const rr = Math.round(ar + (br - ar) * t);
+  const rg = Math.round(ag + (bg - ag) * t);
+  const rb = Math.round(ab + (bb - ab) * t);
+  return '#' + ((rr << 16) | (rg << 8) | rb).toString(16).padStart(6, '0');
+}
+
+function drawGround(c, w, h, groundY) {
+  // grass
+  c.fillStyle = '#8fbc8f';
+  c.fillRect(0, groundY, w, 15);
+  // road
+  c.fillStyle = '#a0a0a0';
+  c.fillRect(0, groundY + 15, w, h - groundY - 15);
+  // road lines
+  c.strokeStyle = '#d0d0d0';
+  c.lineWidth = 2;
+  c.setLineDash([20, 15]);
+  c.beginPath();
+  c.moveTo(0, groundY + 15 + (h - groundY - 15) * 0.5);
+  c.lineTo(w, groundY + 15 + (h - groundY - 15) * 0.5);
+  c.stroke();
+  c.setLineDash([]);
+  // sidewalk
+  c.fillStyle = '#c8b89c';
+  c.fillRect(0, groundY, w, 15);
+}
+
+// ==================== BUILDINGS ====================
+function drawBuildings(c, camX, w, groundY) {
+  const buildings = [
+    {x: 50, w: 80, h: 120, col: '#d4a373'},
+    {x: 180, w: 60, h: 90, col: '#c9b99a'},
+    {x: 350, w: 100, h: 140, col: '#b8a88a'},
+    {x: 700, w: 70, h: 100, col: '#d4a373'},
+    {x: 1050, w: 90, h: 130, col: '#c9b99a'},
+    {x: 1200, w: 60, h: 80, col: '#b8a88a'},
+    {x: 1550, w: 110, h: 150, col: '#d4a373'},
+    {x: 1750, w: 70, h: 95, col: '#c9b99a'},
+    {x: 2100, w: 80, h: 110, col: '#b8a88a'},
+    {x: 2350, w: 100, h: 135, col: '#d4a373'},
+    {x: 2550, w: 60, h: 85, col: '#c9b99a'},
+    {x: 2800, w: 90, h: 120, col: '#b8a88a'},
+    {x: 3000, w: 75, h: 100, col: '#d4a373'},
+  ];
+  buildings.forEach(b => {
+    const sx = b.x - camX;
+    if (sx + b.w < -50 || sx > w + 50) return;
+    const by = groundY - b.h + 15;
+    c.fillStyle = b.col;
+    c.fillRect(sx, by, b.w, b.h);
+    c.strokeStyle = '#8B6914';
+    c.lineWidth = 1.5;
+    c.strokeRect(sx, by, b.w, b.h);
+    // windows
+    c.fillStyle = (G.timeOfDay >= 19 || G.timeOfDay < 6) ? '#ffeaa7' : '#87CEEB';
+    const ww = 10, wh = 12, gap = 18;
+    for (let wy = by + 15; wy < by + b.h - 20; wy += gap + 5) {
+      for (let wx = sx + 10; wx < sx + b.w - 15; wx += gap) {
+        c.fillRect(wx, wy, ww, wh);
+      }
+    }
+  });
+}
+
+// ==================== STALL DRAWING ====================
+function drawStall(c, sx, sy, level, isPlayer) {
+  const lw = Math.max(2, 2.5);
+  c.strokeStyle = '#5a3e1b';
+  c.lineWidth = lw;
+  c.fillStyle = '#deb887';
+
+  if (level === 0 || !isPlayer) {
+    // Simple table/box
+    c.fillRect(sx - 25, sy - 20, 50, 20);
+    c.strokeRect(sx - 25, sy - 20, 50, 20);
+    // legs
+    drawWobblyLine(c, sx - 22, sy, sx - 22, sy + 15, 1);
+    drawWobblyLine(c, sx + 22, sy, sx + 22, sy + 15, 1);
+  }
+  if (level >= 1 && isPlayer) {
+    // Cart with wheels
+    c.fillRect(sx - 35, sy - 25, 70, 25);
+    c.strokeRect(sx - 35, sy - 25, 70, 25);
+    // handle
+    drawWobblyLine(c, sx + 35, sy - 15, sx + 50, sy - 5, 1);
+    // wheels
+    c.strokeStyle = '#5a3e1b';
+    c.lineWidth = 2;
+    drawWobblyCircle(c, sx - 20, sy + 5, 6, 0.5); c.stroke();
+    drawWobblyCircle(c, sx + 20, sy + 5, 6, 0.5); c.stroke();
+  }
+  if (level >= 2 && isPlayer) {
+    // Awning
+    c.fillStyle = '#e74c3c';
+    c.beginPath();
+    c.moveTo(sx - 45, sy - 25);
+    c.lineTo(sx + 45, sy - 25);
+    c.lineTo(sx + 50, sy - 40);
+    c.lineTo(sx - 50, sy - 40);
+    c.closePath();
+    c.fill();
+    c.strokeStyle = '#c0392b';
+    c.lineWidth = 1.5;
+    c.stroke();
+    // stripes
+    c.fillStyle = '#fff';
+    for (let i = -40; i < 40; i += 16) {
+      c.fillRect(sx + i, sy - 39, 7, 14);
+    }
+  }
+  if (level >= 3 && isPlayer) {
+    // Sign
+    c.fillStyle = '#f5c542';
+    c.fillRect(sx - 30, sy - 58, 60, 16);
+    c.strokeStyle = '#d4a017';
+    c.lineWidth = 1.5;
+    c.strokeRect(sx - 30, sy - 58, 60, 16);
+    c.fillStyle = '#c0392b';
+    c.font = 'bold 11px Microsoft YaHei';
+    c.textAlign = 'center';
+    c.fillText('品牌连锁', sx, sy - 46);
+  }
+  if (level >= 4 && isPlayer) {
+    // Big building outline
+    c.strokeStyle = '#f5c542';
+    c.lineWidth = 2;
+    c.strokeRect(sx - 55, sy - 75, 110, 90);
+    // neon sign
+    c.fillStyle = '#ff6b6b';
+    c.font = 'bold 14px Microsoft YaHei';
+    c.textAlign = 'center';
+    c.fillText('★ 上市集团 ★', sx, sy - 62);
+    // decorative lights
+    const t = Date.now() * 0.005;
+    for (let i = 0; i < 8; i++) {
+      const lx = sx - 50 + i * 14;
+      const bright = Math.sin(t + i * 0.8) * 0.5 + 0.5;
+      c.fillStyle = `rgba(255,215,0,${bright})`;
+      c.beginPath(); c.arc(lx, sy - 75, 3, 0, Math.PI * 2); c.fill();
+    }
+  }
+
+  // Food items on stall (煎饼果子)
+  if (isPlayer) {
+    c.fillStyle = '#d4a017';
+    for (let i = 0; i < Math.min(5, Math.max(1, level + 1)); i++) {
+      const fx = sx - 15 + i * 8;
+      const fy = sy - 23 - (level >= 1 ? 5 : 0);
+      c.beginPath(); c.ellipse(fx, fy, 5, 3, 0, 0, Math.PI * 2); c.fill();
+    }
+  }
+}
+
+// ==================== NPC DRAWING ====================
+function drawNPC(c, npc, camX, groundY) {
+  const sx = npc.x - camX;
+  const sy = groundY - 2;
+  if (sx < -50 || sx > G.W + 50) return;
+  const walkCycle = Math.sin(npc.walkFrame) * 0.5;
+  drawStickFigure(c, sx, sy, {
+    scale: 0.7 * npc.size,
+    color: npc.color,
+    state: 'walk',
+    walkFrame: npc.walkFrame,
+    dir: npc.dir,
+    fill: true
+  });
+}
+
+// ==================== CUSTOMER DRAWING ====================
+function drawCustomer(c, cust, camX, groundY) {
+  const sx = cust.x - camX;
+  const sy = groundY - 2;
+  if (sx < -50 || sx > G.W + 50) return;
+  drawStickFigure(c, sx, sy, {
+    scale: 0.75,
+    color: cust.color,
+    state: cust.state || 'walk',
+    walkFrame: cust.walkFrame || 0,
+    dir: cust.dir || 1,
+    fill: true
+  });
+}
+
+// ==================== RAIN ====================
+function updateRain(dt) {
+  if (G.eventActive && G.eventActive.id === 'rain') {
+    while (G.rainDrops.length < 100) {
+      G.rainDrops.push({
+        x: Math.random() * G.W,
+        y: Math.random() * G.H * 0.3,
+        speed: 300 + Math.random() * 200,
+        len: 8 + Math.random() * 12
+      });
+    }
+  }
+  G.rainDrops.forEach(d => {
+    d.y += d.speed * dt;
+    if (d.y > G.groundY + 10) {
+      d.y = -10;
+      d.x = Math.random() * G.W;
+    }
+  });
+  if (!G.eventActive || G.eventActive.id !== 'rain') {
+    G.rainDrops = [];
+  }
+}
+
+function drawRain(c) {
+  if (G.rainDrops.length === 0) return;
+  c.strokeStyle = 'rgba(150,200,255,0.5)';
+  c.lineWidth = 1.5;
+  G.rainDrops.forEach(d => {
+    c.beginPath();
+    c.moveTo(d.x, d.y);
+    c.lineTo(d.x - 2, d.y + d.len);
+    c.stroke();
+  });
+}
+
+// ==================== PARTICLES ====================
+function spawnParticles(x, y, count, color) {
+  for (let i = 0; i < count; i++) {
+    G.particles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 120,
+      vy: -Math.random() * 150 - 50,
+      life: 0.6 + Math.random() * 0.4,
+      maxLife: 0.6 + Math.random() * 0.4,
+      color: color || '#f5c542',
+      size: 2 + Math.random() * 3
+    });
+  }
+}
+
+function updateParticles(dt) {
+  G.particles.forEach(p => {
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vy += 200 * dt;
+    p.life -= dt;
+  });
+  G.particles = G.particles.filter(p => p.life > 0);
+}
+
+function drawParticles(c) {
+  G.particles.forEach(p => {
+    c.globalAlpha = Math.max(0, p.life / p.maxLife);
+    c.fillStyle = p.color;
+    c.beginPath();
+    c.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    c.fill();
+  });
+  c.globalAlpha = 1;
+}
+
+// ==================== PLAYER MOVEMENT ====================
+function updatePlayer(dt) {
+  const p = G.player;
+  let spd = 120;
+  // Apply explore speed skill bonus
+  if (G.mode === 'rest' || G.mode === 'explore') {
+    spd *= (1 + (G.skillLevels['explore'] || 0) * 0.3);
+  }
+
+  // Keyboard input
+  if (G.mode === 'explore' || G.mode === 'rest') {
+    if (G.keys['a'] || G.keys['A'] || G.keys['ArrowLeft']) p.targetX = p.x - 200;
+    if (G.keys['d'] || G.keys['D'] || G.keys['ArrowRight']) p.targetX = p.x + 200;
+  }
+
+  // Move toward target
+  const dx = p.targetX - p.x;
+  if (Math.abs(dx) > 3) {
+    const moveDir = dx > 0 ? 1 : -1;
+    p.x += moveDir * spd * dt;
+    p.dir = moveDir;
+    p.walkFrame += dt * 8;
+    p.state = 'walk';
+    if ((moveDir > 0 && p.x > p.targetX) || (moveDir < 0 && p.x < p.targetX)) {
+      p.x = p.targetX;
+    }
+  } else {
+    if (p.state === 'walk') p.state = 'idle';
+    p.walkFrame *= 0.9;
+  }
+
+  // Clamp to map
+  p.x = Math.max(30, Math.min(MAP_W - 30, p.x));
+
+  // Update camera
+  G.camera.x = p.x - G.W / 2;
+  G.camera.x = Math.max(0, Math.min(MAP_W - G.W, G.camera.x));
+}
+
+// ==================== BUSINESS LOGIC ====================
+function startBusiness() {
+  if (G.mode !== 'explore' && G.mode !== 'rest') return;
+  if (G.inv <= 0) return;
+  // Move player to stall first
+  G.player.targetX = G.stallX;
+  G.mode = 'business';
+  G.timeOfDay = BUSINESS_START;
+  G.salesToday = 0;
+  G.incomeToday = 0;
+  G.lastSaleIncome = 0;
+  G.eventMod = 1;
+  G.eventActive = null;
+  G.customers = [];
+  G.customerTimer = 2;
+  G.businessTimer = 0;
+  G.dayEnded = false;
+  // Reset cooking & combo
+  G.cooking = {active:false, pos:0, dir:1, speed:2.5, clicked:false};
+  G.combo = 0;
+  G.maxCombo = 0;
+  G.perfectsToday = 0;
+  G.lastQuality = 1;
+  // Apply skill price bonus
+  G.priceBonus = (G.skillLevels['price1']||0)*2 + (G.skillLevels['price2']||0)*3;
+  // Apply cooking speed from skills
+  let spd = 2.5;
+  if (G.skillLevels['speed1']) spd *= 0.8;
+  if (G.skillLevels['speed2']) spd *= 0.8;
+  G.cooking.speed = spd;
+  // Generate daily challenge
+  generateChallenge();
+  startBGM();
+  updateButtons();
+  updateChallengeUI();
+  // Check for random event
+  const eventChance = G.skillLevels['luck'] ? 0.45 : 0.3;
+  if (Math.random() < eventChance) {
+    G.eventPending = true;
+  }
+}
+
+function updateBusiness(dt) {
+  if (G.mode !== 'business') return;
+  if (G.eventPending && !G.eventActive) {
+    triggerRandomEvent();
+    G.eventPending = false;
+    return;
+  }
+  if (G.eventActive && G.eventActive.needsChoice) return; // wait for player choice
+
+  // Cooking mini-game update
+  if (G.cooking.active && !G.cooking.clicked) {
+    // Move cooking bar
+    const barSpeed = G.cooking.speed * (1 + G.level * 0.15);
+    G.cooking.pos += G.cooking.dir * barSpeed * dt;
+    if (G.cooking.pos >= 1) { G.cooking.pos = 1; G.cooking.dir = -1; }
+    if (G.cooking.pos <= 0) { G.cooking.pos = 0; G.cooking.dir = 1; }
+    // Don't advance time while cooking
+    return;
+  }
+
+  // Resolve cooking if clicked
+  if (G.cooking.active && G.cooking.clicked) {
+    resolveCooking();
+    G.cooking.active = false;
+    G.cooking.clicked = false;
+  }
+
+  // Advance time
+  const timeSpeed = (BUSINESS_END - BUSINESS_START) / DAY_DURATION;
+  G.timeOfDay += timeSpeed * dt;
+
+  // Spawn customers
+  const charmBonus = 1 - (G.skillLevels['charm']||0) * 0.15;
+  G.customerTimer -= dt;
+  if (G.customerTimer <= 0 && G.timeOfDay < BUSINESS_END) {
+    const interval = Math.max(1.5, 6 - G.level * 1.2);
+    G.customerTimer = interval * (0.7 + Math.random() * 0.6) * charmBonus;
+    if (G.eventActive && G.eventActive.id === 'rain') G.customerTimer *= 1.8;
+    spawnCustomer();
+  }
+
+  // Update customers
+  G.customers.forEach(cu => {
+    if (cu.state === 'walk') {
+      const dx = cu.targetX - cu.x;
+      if (Math.abs(dx) > 5) {
+        cu.x += Math.sign(dx) * 80 * dt;
+        cu.walkFrame = (cu.walkFrame || 0) + dt * 6;
+        cu.dir = dx > 0 ? 1 : -1;
+      } else {
+        cu.x = cu.targetX;
+        if (cu.phase === 'arrive') {
+          cu.state = 'buy';
+          cu.buyTimer = 0.8;
+          // Activate cooking mini-game!
+          G.cooking.active = true;
+          G.cooking.clicked = false;
+          G.cooking.pos = 0;
+          G.cooking.dir = 1;
+          G.cooking.autoTimer = 3.0; // auto-resolve after 3 seconds
+        } else {
+          cu.done = true; // mark for removal
+        }
+      }
+    } else if (cu.state === 'buy') {
+      // Auto-resolve cooking if timer runs out
+      if (G.cooking.active && !G.cooking.clicked) {
+        G.cooking.autoTimer -= dt;
+        if (G.cooking.autoTimer <= 0) {
+          G.cooking.clicked = true; // force resolve
+        }
+        return; // wait for cooking
+      }
+      cu.buyTimer -= dt;
+      if (cu.buyTimer <= 0) {
+        // Complete purchase
+        if (G.inv > 0) {
+          G.inv--;
+          G.salesToday++;
+          const basePrice = PRICE + G.priceBonus;
+          const qualityMult = G.lastQuality || 1;
+          const comboMult = 1 + G.combo * 0.1;
+          const comboBonusSkill = 1 + (G.skillLevels['combo1']||0)*0.25 + (G.skillLevels['combo2']||0)*0.25;
+          const income = Math.round(basePrice * qualityMult * G.eventMod * (G.combo > 0 ? comboMult * comboBonusSkill : 1));
+          G.money += income;
+          G.incomeToday += income;
+          G.lastSaleIncome = income;
+          sfxSell();
+          spawnParticles(G.stallX - G.camera.x, G.groundY - 40, 5, '#f5c542');
+          // Update challenge
+          updateChallenge('sale', income);
+        }
+        cu.state = 'walk';
+        cu.targetX = cu.exitX;
+        cu.phase = 'gone';
+      }
+    }
+  });
+  G.customers = G.customers.filter(cu => !cu.done);
+
+  // Check inventory
+  if (G.inv <= 0 && !G.dayEnded) {
+    G.dayEnded = true;
+    G.customers = [];
+    setTimeout(() => endDay(), 800);
+  }
+
+  // Check day end
+  if (G.timeOfDay >= BUSINESS_END && !G.dayEnded) {
+    G.dayEnded = true;
+    G.customers = [];
+    setTimeout(() => endDay(), 1500);
+  }
+
+  // Quality popup timer
+  if (G.qualityTimer > 0) G.qualityTimer -= dt;
+}
+
+function spawnCustomer() {
+  const fromLeft = Math.random() > 0.5;
+  const startX = fromLeft ? G.stallX - 300 - Math.random() * 200 : G.stallX + 300 + Math.random() * 200;
+  const targetX = G.stallX + (Math.random() - 0.5) * 30;
+  const exitX = fromLeft ? G.stallX + 300 + Math.random() * 200 : G.stallX - 300 - Math.random() * 200;
+  G.customers.push({
+    x: startX,
+    targetX: targetX,
+    exitX: exitX,
+    dir: fromLeft ? 1 : -1,
+    color: ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#e67e22'][Math.floor(Math.random()*6)],
+    walkFrame: 0,
+    state: 'walk',
+    phase: 'arrive',
+    buyTimer: 0
+  });
+}
+
+function endDay() {
+  if (G.mode === 'gameover') return;
+  G.mode = 'summary';
+  sfxDayEnd();
+  stopBGM();
+  // Inventory spoilage (reduced by stock skill)
+  const spoilReduce = G.skillLevels['stock'] || 0;
+  const spoilage = Math.max(0, 1 - spoilReduce);
+  G.inv = Math.max(0, G.inv - spoilage);
+  // Check challenge completion
+  let challengeResult = '';
+  if (G.challenge) {
+    const ch = G.challenge;
+    let completed = false;
+    if (ch.type === 'sales' && G.salesToday >= ch.params.n) completed = true;
+    if (ch.type === 'income' && G.incomeToday >= ch.params.n) completed = true;
+    if (ch.type === 'combo' && G.maxCombo >= ch.params.n) completed = true;
+    if (ch.type === 'perfects' && G.perfectsToday >= ch.params.n) completed = true;
+    if (ch.type === 'invAbove' && G.inv >= ch.params.n) completed = true;
+    if (completed) {
+      const reward = ch.rewardVal;
+      G.money += reward;
+      challengeResult = `\n🏆 挑战完成！奖励 ${reward} 元`;
+      sfxChallengeComplete();
+    } else {
+      challengeResult = `\n❌ 挑战未完成...`;
+    }
+  }
+  // Hide challenge bar
+  document.getElementById('challenge-bar').style.display = 'none';
+  document.getElementById('combo-display').style.display = 'none';
+  // Show summary
+  const sumText = `卖出 ${G.salesToday} 份煎饼\n今日收入 ${G.incomeToday} 元\n最高连击 ${G.maxCombo} 次\n当前余额 ${G.money} 元\n剩余库存 ${G.inv} 份${challengeResult}`;
+  document.getElementById('sum-text').innerText = sumText;
+  document.getElementById('day-summary').classList.add('show');
+
+  if (G.inv <= 0) {
+    setTimeout(() => {
+      closeSummary();
+      gameOver();
+    }, 100);
+  }
+}
+
+function closeSummary() {
+  document.getElementById('day-summary').classList.remove('show');
+  G.day++;
+  G.mode = 'explore';
+  G.player.targetX = G.stallX;
+  G.customers = [];
+  G.eventActive = null;
+  updateUI();
+  updateButtons();
+}
+
+function gameOver() {
+  G.mode = 'gameover';
+  G.player.state = 'lie';
+  sfxGameOver();
+  document.getElementById('go-text').innerText = `你坚持了 ${G.day} 天，最终资产 ${G.money} 元，摊位等级：${LEVEL_NAMES[G.level]}`;
+  document.getElementById('gameover-screen').style.display = 'flex';
+  document.getElementById('status').style.display = 'none';
+  document.getElementById('buttons').style.display = 'none';
+  document.getElementById('tip').style.display = 'none';
+}
+
+// ==================== COOKING RESOLVE ====================
+function resolveCooking() {
+  const pos = G.cooking.pos;
+  let quality, text, color, mult;
+  if (pos >= 0.4 && pos <= 0.6) {
+    quality = 'perfect'; text = '完美!'; color = '#ffd700'; mult = 2;
+    G.perfectsToday++;
+    sfxCookPerfect();
+  } else if (pos >= 0.25 && pos <= 0.75) {
+    quality = 'good'; text = '不错!'; color = '#4facfe'; mult = 1.5;
+    sfxCookGood();
+  } else if (pos >= 0.1 && pos <= 0.9) {
+    quality = 'ok'; text = '一般'; color = '#43e97b'; mult = 1;
+    sfxCookOk();
+  } else {
+    quality = 'bad'; text = '糊了...'; color = '#f5576c'; mult = 0.5;
+    G.combo = 0;
+    G.lastQuality = mult;
+    sfxCookBad();
+    showQualityPopup(text, color);
+    updateChallenge('quality', mult);
+    return;
+  }
+  G.combo++;
+  if (G.combo > G.maxCombo) G.maxCombo = G.combo;
+  if (G.combo > 1) sfxCombo();
+  G.lastQuality = mult;
+  showQualityPopup(text + (G.combo > 1 ? ` ${G.combo}连击!` : ''), color);
+  updateChallenge('quality', mult);
+  updateChallenge('combo', G.maxCombo);
+  // Update combo display
+  const comboEl = document.getElementById('combo-display');
+  if (G.combo > 1) {
+    comboEl.innerText = `${G.combo} 连击! x${(1 + G.combo * 0.1).toFixed(1)}`;
+    comboEl.style.display = 'block';
+  } else {
+    comboEl.style.display = 'none';
+  }
+}
+
+function showQualityPopup(text, color) {
+  const el = document.getElementById('quality-popup');
+  el.innerText = text;
+  el.style.color = color;
+  el.style.opacity = '1';
+  el.style.transform = 'translate(-50%, -60%)';
+  setTimeout(() => {
+    el.style.opacity = '0';
+    el.style.transform = 'translate(-50%, -50%)';
+  }, 800);
+}
+
+// ==================== DAILY CHALLENGE ====================
+function generateChallenge() {
+  const template = CHALLENGES[Math.floor(Math.random() * CHALLENGES.length)];
+  const params = template.gen();
+  const desc = template.desc.replace('{n}', params.n);
+  const rewardVal = template.reward(params.n);
+  G.challenge = { type: template.type, params, desc, rewardVal };
+  G.challengeProgress = 0;
+}
+
+function updateChallenge(type, value) {
+  if (!G.challenge) return;
+  const ch = G.challenge;
+  if (type === 'sale' && ch.type === 'sales') G.challengeProgress++;
+  if (type === 'sale' && ch.type === 'income') G.challengeProgress += value;
+  if (type === 'combo' && ch.type === 'combo') G.challengeProgress = G.maxCombo;
+  if (type === 'quality' && ch.type === 'perfects' && value >= 2) G.challengeProgress++;
+  updateChallengeUI();
+}
+
+function updateChallengeUI() {
+  const bar = document.getElementById('challenge-bar');
+  if (!G.challenge || G.mode !== 'business') {
+    bar.style.display = 'none';
+    return;
+  }
+  bar.style.display = 'block';
+  const ch = G.challenge;
+  let progress = G.challengeProgress;
+  if (ch.type === 'invAbove') {
+    bar.innerText = `🎯 ${ch.desc} | 奖励 ${ch.rewardVal}元`;
+  } else {
+    bar.innerText = `🎯 ${ch.desc} (${Math.min(progress, ch.params.n)}/${ch.params.n}) | 奖励 ${ch.rewardVal}元`;
+  }
+}
+
+// ==================== SKILL TREE ====================
+function toggleSkillPanel() {
+  const panel = document.getElementById('skill-panel');
+  panel.classList.toggle('show');
+  if (panel.classList.contains('show')) renderSkillList();
+}
+
+function renderSkillList() {
+  const list = document.getElementById('skill-list');
+  list.innerHTML = '';
+  SKILLS.forEach(sk => {
+    const curLv = G.skillLevels[sk.id] || 0;
+    const maxed = curLv >= sk.maxLv;
+    const canAfford = G.money >= sk.cost;
+    const reqMet = !sk.requires || (G.skillLevels[sk.requires] || 0) > 0;
+    const row = document.createElement('div');
+    row.className = 'skill-row';
+    let statusText = maxed ? '已满级' : `${sk.cost}元`;
+    let btnDisabled = maxed || !canAfford || !reqMet;
+    let reqText = '';
+    if (!reqMet) {
+      const reqSk = SKILLS.find(s => s.id === sk.requires);
+      reqText = ` (需要: ${reqSk ? reqSk.name : sk.requires})`;
+    }
+    row.innerHTML = `
+      <div class="skill-info">
+        <div class="skill-name">${sk.name}</div>
+        <div class="skill-desc">${sk.desc}</div>
+        <div class="skill-lvl">Lv.${curLv}/${sk.maxLv}${reqText}</div>
+      </div>
+      <button class="skill-btn" ${btnDisabled ? 'disabled' : ''}>${statusText}</button>
+    `;
+    const btn = row.querySelector('.skill-btn');
+    if (!maxed && canAfford && reqMet) {
+      btn.onclick = () => buySkill(sk.id);
+    }
+    list.appendChild(row);
+  });
+}
+
+function buySkill(skillId) {
+  const sk = SKILLS.find(s => s.id === skillId);
+  if (!sk) return;
+  const curLv = G.skillLevels[sk.id] || 0;
+  if (curLv >= sk.maxLv) return;
+  if (G.money < sk.cost) return;
+  if (sk.requires && (G.skillLevels[sk.requires] || 0) < 1) return;
+  G.money -= sk.cost;
+  G.skillLevels[sk.id] = curLv + 1;
+  sfxSkillBuy();
+  updateUI();
+  renderSkillList();
+}
+
+// ==================== UPGRADE ====================
+function doUpgrade() {
+  if (G.level >= 4) return;
+  const cost = LEVEL_COSTS[G.level + 1];
+  if (G.money < cost) return;
+  G.money -= cost;
+  G.level++;
+  G.player.hasCrown = true;
+  G.player.crownT = 3;
+  spawnParticles(G.W / 2, G.groundY - 60, 20, '#f5c542');
+  spawnParticles(G.W / 2, G.groundY - 60, 15, '#ff6b6b');
+  sfxUpgrade();
+  updateUI();
+  updateButtons();
+}
+
+// ==================== REST ====================
+function startRest() {
+  if (G.mode !== 'explore') return;
+  G.mode = 'rest';
+  updateButtons();
+}
+
+// ==================== HOME ====================
+function goHome() {
+  if (G.mode !== 'rest') return;
+  G.player.targetX = G.homeX;
+  G.mode = 'walkingHome';
+  updateButtons();
+}
+
+function checkArriveHome() {
+  if (G.mode !== 'walkingHome') return;
+  if (Math.abs(G.player.x - G.homeX) < 10) {
+    G.mode = 'explore';
+    G.day++;
+    const spoilReduce = G.skillLevels['stock'] || 0;
+    const spoilage = Math.max(0, 1 - spoilReduce);
+    G.inv = Math.max(0, G.inv - spoilage);
+    updateUI();
+    updateButtons();
+    if (G.inv <= 0) gameOver();
+  }
+}
+
+// ==================== EVENTS ====================
+function triggerRandomEvent() {
+  const ev = EVENTS[Math.floor(Math.random() * EVENTS.length)];
+  G.eventActive = {...ev, needsChoice: ev.options.length > 1 || ev.id === 'wanghong' || ev.id === 'rain' || ev.id === 'foodfest'};
+  sfxEvent();
+
+  if (ev.id === 'wanghong' || ev.id === 'rain' || ev.id === 'foodfest') {
+    // Auto-apply events
+    if (ev.id === 'wanghong') G.eventMod = 2;
+    if (ev.id === 'rain') G.eventMod = 0.5;
+    if (ev.id === 'foodfest') G.eventMod = 1.5;
+    G.eventActive.needsChoice = false;
+  }
+
+  // Show popup
+  document.getElementById('ev-title').innerText = ev.title;
+  document.getElementById('ev-desc').innerText = ev.desc;
+  const btnContainer = document.getElementById('event-btns');
+  btnContainer.innerHTML = '';
+  ev.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-action';
+    btn.innerText = opt.text;
+    btn.onclick = () => { sfxClick(); resolveEvent(opt.result); };
+    btnContainer.appendChild(btn);
+  });
+  document.getElementById('event-popup').classList.add('show');
+
+  if (!ev.options.length || ev.options[0].result === 'accept') {
+    // Auto-resolve after delay
+    setTimeout(() => {
+      if (G.eventActive && G.eventActive.id === ev.id) {
+        resolveEvent('accept');
+      }
+    }, 2000);
+  }
+}
+
+function resolveEvent(result) {
+  document.getElementById('event-popup').classList.remove('show');
+  if (result === 'run') {
+    G.inv = Math.floor(G.inv / 2);
+    sfxEventBad();
+  } else if (result === 'bribe') {
+    G.money = Math.max(0, G.money - 20);
+    sfxEventBad();
+  } else if (result === 'buy50') {
+    if (G.money >= 30) { G.money -= 30; G.inv += 50; }
+    sfxEventGood();
+  } else if (result === 'skip') {
+    // do nothing
+    sfxEventBad();
+  } else if (result === 'compete') {
+    if (G.money >= 15) { G.money -= 15; G.eventMod = 1.3; }
+    sfxEventGood();
+  } else if (result === 'befriend') {
+    G.inv = Math.max(0, G.inv - 1);
+    G.eventMod = 1.2;
+    sfxEventGood();
+  } else if (result === 'open') {
+    const reward = 10 + Math.floor(Math.random() * 40);
+    G.money += reward;
+    sfxEventGood();
+  } else if (result === 'pass') {
+    if (G.money >= 10) G.money -= 10;
+    sfxEventBad();
+  } else if (result === 'flee') {
+    G.inv = Math.max(0, G.inv - 5);
+    sfxEventBad();
+  } else {
+    sfxEventGood();
+  }
+  updateUI();
+  G.eventActive = {...G.eventActive, needsChoice: false};
+  setTimeout(() => { G.eventActive = null; }, 500);
+}
+
+// ==================== UI ====================
+function updateUI() {
+  document.getElementById('s-day').innerText = G.day;
+  document.getElementById('s-money').innerText = G.money;
+  document.getElementById('s-level').innerText = LEVEL_NAMES[G.level];
+  document.getElementById('s-inv').innerText = G.inv;
+}
+
+function updateButtons() {
+  const isBiz = G.mode === 'business';
+  const isExplore = G.mode === 'explore';
+  const isRest = G.mode === 'rest';
+  const isWalkingHome = G.mode === 'walkingHome';
+
+  document.getElementById('btn-business').style.display = (isExplore || isRest) ? '' : 'none';
+  document.getElementById('btn-rest').style.display = isExplore ? '' : 'none';
+  document.getElementById('btn-home').style.display = isRest ? '' : 'none';
+
+  const upgradeBtn = document.getElementById('btn-upgrade');
+  if (G.level >= 4) {
+    upgradeBtn.innerText = '已满级';
+    upgradeBtn.disabled = true;
+  } else {
+    const cost = LEVEL_COSTS[G.level + 1];
+    upgradeBtn.innerText = `升级 (${cost}元)`;
+    upgradeBtn.disabled = G.money < cost;
+  }
+}
+
+// ==================== LOADING ANIMATION ====================
+let loadStartTime = 0;
+function runLoading(timestamp) {
+  if (!loadStartTime) loadStartTime = timestamp;
+  const elapsed = (timestamp - loadStartTime) / 1000;
+  const lc = loadCtx;
+  const lw = 400, lh = 300;
+  const lgy = 220;
+
+  lc.clearRect(0, 0, lw, lh);
+
+  // Background
+  lc.fillStyle = '#f5ebe0';
+  lc.fillRect(0, 0, lw, lh);
+  // Ground
+  lc.fillStyle = '#c8b89c';
+  lc.fillRect(0, lgy, lw, lh - lgy);
+
+  // Stall at right
+  lc.strokeStyle = '#5a3e1b';
+  lc.lineWidth = 2;
+  lc.fillStyle = '#deb887';
+  lc.fillRect(300, lgy - 25, 60, 25);
+  lc.strokeRect(300, lgy - 25, 60, 25);
+  // awning
+  lc.fillStyle = '#e74c3c';
+  lc.beginPath();
+  lc.moveTo(295, lgy - 25);
+  lc.lineTo(365, lgy - 25);
+  lc.lineTo(370, lgy - 40);
+  lc.lineTo(290, lgy - 40);
+  lc.closePath();
+  lc.fill();
+
+  if (elapsed < 1.5) {
+    // Phase 1: stick figure walks in from left
+    const f = elapsed / 1.5;
+    G.stickX = -20 + f * 200;
+    const walkF = elapsed * 6;
+    drawStickFigure(lc, G.stickX, lgy - 2, {
+      scale: 1, color: '#4a90d9', state: 'walk', walkFrame: walkF, dir: 1
+    });
+    document.getElementById('loading-text').innerText = '火柴人出门了...';
+  } else if (elapsed < 2.5) {
+    // Phase 2: stick figure arrives, waves
+    G.stickX = 180;
+    const waveF = (elapsed - 1.5) * 4;
+    drawStickFigure(lc, G.stickX, lgy - 2, {
+      scale: 1, color: '#4a90d9', state: 'happy', walkFrame: waveF, dir: 1
+    });
+    // Speech bubble
+    lc.fillStyle = 'rgba(255,255,255,0.9)';
+    lc.beginPath();
+    lc.ellipse(G.stickX + 30, lgy - 60, 30, 18, 0, 0, Math.PI * 2);
+    lc.fill();
+    lc.strokeStyle = '#999';
+    lc.lineWidth = 1;
+    lc.stroke();
+    lc.fillStyle = '#333';
+    lc.font = '12px Microsoft YaHei';
+    lc.textAlign = 'center';
+    lc.fillText('早上好！', G.stickX + 30, lgy - 56);
+    document.getElementById('loading-text').innerText = '火柴人打招呼...';
+  } else if (elapsed < 4) {
+    // Phase 3: walk to stall
+    const f = (elapsed - 2.5) / 1.5;
+    G.stickX = 180 + f * 100;
+    drawStickFigure(lc, G.stickX, lgy - 2, {
+      scale: 1, color: '#4a90d9', state: 'walk', walkFrame: elapsed * 6, dir: 1
+    });
+    document.getElementById('loading-text').innerText = '去摊位啦！';
+  } else {
+    // Phase 4: arrive at stall, start game
+    G.stickX = 280;
+    drawStickFigure(lc, G.stickX, lgy - 2, {
+      scale: 1, color: '#4a90d9', state: 'happy', walkFrame: 0, dir: 1
+    });
+    document.getElementById('loading-text').innerText = '开始营业！';
+  }
+
+  if (elapsed < 4.5) {
+    requestAnimationFrame(runLoading);
+  } else {
+    // Loading done, start game
+    document.getElementById('loading-screen').classList.add('hide');
+    setTimeout(() => {
+      document.getElementById('loading-screen').style.display = 'none';
+    }, 500);
+    startGame();
+  }
+}
+
+// ==================== COOKING BAR RENDER ====================
+function renderCookingBar(c, w, h) {
+  if (!G.cooking.active) return;
+  const barW = Math.min(300, w * 0.6);
+  const barH = 22;
+  const barX = (w - barW) / 2;
+  const barY = h - 90;
+
+  // Background
+  c.fillStyle = 'rgba(0,0,0,0.6)';
+  c.beginPath();
+  c.roundRect(barX - 8, barY - 28, barW + 16, barH + 40, 12);
+  c.fill();
+
+  // Label
+  c.fillStyle = '#fff';
+  c.font = 'bold 13px Microsoft YaHei';
+  c.textAlign = 'center';
+  c.fillText('🍳 点击制作!', w / 2, barY - 10);
+
+  // Bar background gradient
+  const grad = c.createLinearGradient(barX, 0, barX + barW, 0);
+  grad.addColorStop(0, '#e74c3c');
+  grad.addColorStop(0.1, '#e74c3c');
+  grad.addColorStop(0.25, '#f39c12');
+  grad.addColorStop(0.4, '#2ecc71');
+  grad.addColorStop(0.5, '#27ae60');
+  grad.addColorStop(0.6, '#2ecc71');
+  grad.addColorStop(0.75, '#f39c12');
+  grad.addColorStop(0.9, '#e74c3c');
+  grad.addColorStop(1, '#e74c3c');
+  c.fillStyle = grad;
+  c.beginPath();
+  c.roundRect(barX, barY, barW, barH, 6);
+  c.fill();
+
+  // Center perfect zone highlight
+  c.fillStyle = 'rgba(255,255,255,0.2)';
+  c.fillRect(barX + barW * 0.4, barY, barW * 0.2, barH);
+
+  // Indicator line
+  const indX = barX + G.cooking.pos * barW;
+  c.strokeStyle = '#fff';
+  c.lineWidth = 3;
+  c.beginPath();
+  c.moveTo(indX, barY - 4);
+  c.lineTo(indX, barY + barH + 4);
+  c.stroke();
+  // Indicator triangle
+  c.fillStyle = '#fff';
+  c.beginPath();
+  c.moveTo(indX - 6, barY - 4);
+  c.lineTo(indX + 6, barY - 4);
+  c.lineTo(indX, barY + 4);
+  c.closePath();
+  c.fill();
+}
+
+// ==================== MAIN RENDER ====================
+function render(c, w, h) {
+  const gy = G.groundY;
+  const cam = G.camera.x;
+
+  // Sky
+  drawSky(c, w, h, gy);
+
+  // Buildings (background)
+  drawBuildings(c, cam, w, gy);
+
+  // Trees
+  const treePositions = [150, 500, 850, 1150, 1650, 1900, 2250, 2500, 2900, 3100];
+  treePositions.forEach(tx => {
+    const sx = tx - cam;
+    if (sx < -40 || sx > w + 40) return;
+    // trunk
+    c.strokeStyle = '#8B6914';
+    c.lineWidth = 3;
+    drawWobblyLine(c, sx, gy + 10, sx, gy - 30, 1.5);
+    // leaves
+    c.fillStyle = '#6b8e23';
+    drawWobblyCircle(c, sx, gy - 40, 18, 1.5);
+    c.fill();
+    c.strokeStyle = '#556b2f';
+    c.lineWidth = 1.5;
+    c.stroke();
+  });
+
+  // Street lamps
+  const lampPositions = [400, 1000, 1600, 2200, 2800];
+  lampPositions.forEach(lx => {
+    const sx = lx - cam;
+    if (sx < -30 || sx > w + 30) return;
+    c.strokeStyle = '#666';
+    c.lineWidth = 3;
+    drawWobblyLine(c, sx, gy + 12, sx, gy - 50, 1);
+    drawWobblyLine(c, sx, gy - 50, sx + 12, gy - 55, 0.8);
+    // light
+    if (G.timeOfDay >= 18 || G.timeOfDay < 6) {
+      c.fillStyle = 'rgba(255,235,150,0.8)';
+      c.beginPath(); c.arc(sx + 12, gy - 55, 5, 0, Math.PI * 2); c.fill();
+      c.fillStyle = 'rgba(255,235,150,0.15)';
+      c.beginPath(); c.arc(sx + 12, gy - 55, 25, 0, Math.PI * 2); c.fill();
+    }
+  });
+
+  // Ground
+  drawGround(c, w, h, gy);
+
+  // Home (small house)
+  const homeSX = G.homeX - cam;
+  if (homeSX > -80 && homeSX < w + 80) {
+    // house body
+    c.fillStyle = '#d4a373';
+    c.fillRect(homeSX - 25, gy - 35, 50, 50);
+    c.strokeStyle = '#8B6914';
+    c.lineWidth = 2;
+    c.strokeRect(homeSX - 25, gy - 35, 50, 50);
+    // roof
+    c.fillStyle = '#c0392b';
+    c.beginPath();
+    c.moveTo(homeSX - 30, gy - 35);
+    c.lineTo(homeSX, gy - 55);
+    c.lineTo(homeSX + 30, gy - 35);
+    c.closePath();
+    c.fill();
+    c.stroke();
+    // door
+    c.fillStyle = '#8B6914';
+    c.fillRect(homeSX - 7, gy, 14, 15);
+    // window
+    c.fillStyle = (G.timeOfDay >= 19 || G.timeOfDay < 6) ? '#ffeaa7' : '#87CEEB';
+    c.fillRect(homeSX + 10, gy - 25, 10, 10);
+    // label
+    c.fillStyle = '#5a3e1b';
+    c.font = '11px Microsoft YaHei';
+    c.textAlign = 'center';
+    c.fillText('🏠 家', homeSX, gy - 58);
+  }
+
+  // Other stalls
+  G.otherStalls.forEach(os => {
+    const sx = os.x - cam;
+    if (sx < -80 || sx > w + 80) return;
+    drawStall(c, sx, gy, 0, false);
+    // label
+    c.fillStyle = '#5a3e1b';
+    c.font = '11px Microsoft YaHei';
+    c.textAlign = 'center';
+    c.fillText(os.type, sx, gy - 28);
+  });
+
+  // Player's stall
+  const stallSX = G.stallX - cam;
+  drawStall(c, stallSX, gy, G.level, true);
+  // Stall label
+  c.fillStyle = '#5a3e1b';
+  c.font = 'bold 11px Microsoft YaHei';
+  c.textAlign = 'center';
+  const labelY = G.level >= 4 ? gy - 80 : (G.level >= 3 ? gy - 62 : gy - 30);
+  c.fillText('🥞 煎饼果子', stallSX, labelY);
+
+  // NPCs
+  G.npcs.forEach(npc => drawNPC(c, npc, cam, gy));
+
+  // Customers
+  G.customers.forEach(cu => drawCustomer(c, cu, cam, gy));
+
+  // Player
+  const playerSX = G.player.x - cam;
+  let pState = G.player.state;
+  if (G.mode === 'business' && Math.abs(G.player.x - G.stallX) < 10) {
+    const lastInc = G.lastSaleIncome || PRICE;
+    pState = lastInc > 12 ? 'jump' : (lastInc < 5 ? 'sad' : 'work');
+    if (G.timeOfDay >= BUSINESS_END || G.dayEnded) pState = 'idle';
+  }
+  if (G.mode === 'gameover') pState = 'lie';
+  if (G.mode === 'summary') {
+    pState = G.incomeToday > 20 ? 'jump' : (G.incomeToday < 5 ? 'sad' : 'happy');
+  }
+  G.player.state = pState;
+
+  const showCrown = G.player.hasCrown || G.level >= 2;
+  drawStickFigure(c, playerSX, gy - 2, {
+    scale: 1,
+    color: '#4a90d9',
+    state: pState,
+    walkFrame: G.player.walkFrame,
+    dir: G.player.dir,
+    crown: showCrown
+  });
+
+  // Crown timer
+  if (G.player.hasCrown) {
+    G.player.crownT -= 1/60;
+    if (G.player.crownT <= 0) {
+      G.player.hasCrown = false;
+    }
+  }
+
+  // Rain
+  drawRain(c);
+
+  // Particles
+  drawParticles(c);
+
+  // Time indicator during business
+  if (G.mode === 'business') {
+    const hourStr = Math.floor(G.timeOfDay).toString().padStart(2, '0');
+    const minStr = Math.floor((G.timeOfDay % 1) * 60).toString().padStart(2, '0');
+    c.fillStyle = 'rgba(0,0,0,0.5)';
+    c.font = 'bold 16px Microsoft YaHei';
+    c.textAlign = 'center';
+    c.fillText(`🕐 ${hourStr}:${minStr}`, w / 2, 60);
+    // Sales today
+    c.font = '13px Microsoft YaHei';
+    c.fillText(`今日卖出 ${G.salesToday} 份 | 收入 ${G.incomeToday} 元`, w / 2, 80);
+  }
+
+  // Cooking bar
+  renderCookingBar(c, w, h);
+}
+
+// ==================== NPC UPDATE ====================
+function updateNPCs(dt) {
+  G.npcs.forEach(npc => {
+    npc.x += npc.dir * npc.speed * dt;
+    npc.walkFrame += dt * 4;
+    if (npc.x < 30) { npc.x = 30; npc.dir = 1; }
+    if (npc.x > MAP_W - 30) { npc.x = MAP_W - 30; npc.dir = -1; }
+  });
+}
+
+// ==================== MAIN LOOP ====================
+let lastTime = 0;
+function gameLoop(timestamp) {
+  const dt = Math.min(0.05, (timestamp - lastTime) / 1000);
+  lastTime = timestamp;
+
+  if (G.mode === 'explore' || G.mode === 'rest' || G.mode === 'walkingHome') {
+    updatePlayer(dt);
+    updateNPCs(dt);
+    if (G.mode === 'walkingHome') checkArriveHome();
+  } else if (G.mode === 'business') {
+    // Keep player at stall
+    const dx = G.stallX - G.player.x;
+    if (Math.abs(dx) > 3) {
+      G.player.x += Math.sign(dx) * 120 * dt;
+      G.player.walkFrame += dt * 6;
+      G.player.dir = dx > 0 ? 1 : -1;
+    } else {
+      G.player.x = G.stallX;
+    }
+    G.camera.x = G.player.x - G.W / 2;
+    G.camera.x = Math.max(0, Math.min(MAP_W - G.W, G.camera.x));
+    updateNPCs(dt);
+    updateBusiness(dt);
+    updateUI();
+  } else if (G.mode === 'summary') {
+    // idle
+  }
+
+  updateRain(dt);
+  updateParticles(dt);
+
+  // Render
+  ctx.clearRect(0, 0, G.W, G.H);
+  render(ctx, G.W, G.H);
+
+  requestAnimationFrame(gameLoop);
+}
+
+// ==================== START GAME ====================
+function startGame() {
+  initAudio();
+  G.mode = 'explore';
+  G.player.x = G.stallX;
+  G.player.targetX = G.stallX;
+  G.player.state = 'idle';
+  document.getElementById('status').style.display = 'flex';
+  document.getElementById('buttons').style.display = 'flex';
+  document.getElementById('tip').style.display = 'block';
+  updateUI();
+  updateButtons();
+  lastTime = performance.now();
+  requestAnimationFrame(gameLoop);
+}
+
+// ==================== INIT ====================
+initWorld();
+requestAnimationFrame(runLoading);
+</script>
+</body>
+</html>
